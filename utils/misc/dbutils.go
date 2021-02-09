@@ -3,11 +3,8 @@ package misc
 import (
 	"database/sql"
 	"fmt"
-	"strconv"
 
 	"github.com/lib/pq"
-
-	"github.com/rudderlabs/rudder-server/config"
 )
 
 var (
@@ -15,20 +12,44 @@ var (
 	port                          int
 )
 
-func loadConfig() {
-	host = config.GetEnv("JOBS_DB_HOST", "localhost")
-	user = config.GetEnv("JOBS_DB_USER", "ubuntu")
-	port, _ = strconv.Atoi(config.GetEnv("JOBS_DB_PORT", "5432"))
-	password = config.GetEnv("JOBS_DB_PASSWORD", "ubuntu") // Reading secrets from
-	sslmode = config.GetEnv("JOBS_DB_SSL_MODE", "disable")
+type ConfigDBUtils struct {
+	host     string
+	user     string
+	port     int
+	password string
+	sslmode  string
 }
+
+func loadConfig(config ConfigDBUtils) {
+	host = config.host
+	user = config.user
+	port = config.port
+	password = config.password // Reading secrets from
+	sslmode = config.sslmode
+}
+
+var DefaultConfigDBUtils = ConfigDBUtils{host: "localhost", user: "ubuntu", port: 5432, password: "ubuntu", sslmode: "disable"}
 
 /*
 ReplaceDB : Rename the OLD DB and create a new one.
 Since we are not journaling, this should be idemponent
 */
-func ReplaceDB(dbName, targetName string) {
-	loadConfig()
+
+func checkAndValidateConfig(configDBUtilsList ...interface{}) ConfigDBUtils {
+	if len(configDBUtilsList) != 1 {
+		return DefaultConfigDBUtils
+	}
+	switch configDBUtilsList[0].(type) {
+	case ConfigDBUtils:
+		return configDBUtilsList[0].(ConfigDBUtils)
+	default:
+		return DefaultConfigDBUtils
+	}
+}
+
+func ReplaceDB(dbName, targetName string, configDBUtilsList ...interface{}) {
+	config := checkAndValidateConfig(configDBUtilsList...)
+	loadConfig(config)
 	connInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=postgres sslmode=%s",
 		host, port, user, password, sslmode)
 	db, err := sql.Open("postgres", connInfo)
