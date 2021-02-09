@@ -115,44 +115,44 @@ var (
 	levelConfigLock   sync.RWMutex
 )
 
-// func loadConfig() {
-// 	rootLevel = levelMap[config.GetEnv("LOG_LEVEL", "INFO")]
-// 	enableConsole = config.GetBool("Logger.enableConsole", true)
-// 	enableFile = config.GetBool("Logger.enableFile", false)
-// 	consoleJsonFormat = config.GetBool("Logger.consoleJsonFormat", false)
-// 	fileJsonFormat = config.GetBool("Logger.fileJsonFormat", false)
-// 	logFileLocation = config.GetString("Logger.logFileLocation", "/tmp/rudder_log.log")
-// 	logFileSize = config.GetInt("Logger.logFileSize", 100)
-// 	enableTimestamp = config.GetBool("Logger.enableTimestamp", true)
-// 	enableFileNameInLog = config.GetBool("Logger.enableFileNameInLog", false)
-// 	enableStackTrace = config.GetBool("Logger.enableStackTrace", false)
+func loadConfig(config ConfigLogger) {
+	enableConsole = config.enableConsole
+	enableFile = config.enableFile
+	consoleJsonFormat = config.consoleJsonFormat
+	fileJsonFormat = config.fileJsonFormat
+	rootLevel = levelMap[config.rootLevel]
+	enableTimestamp = config.enableTimestamp
+	enableFileNameInLog = config.enableFileNameInLog
+	enableStackTrace = config.enableStackTrace
+	logFileLocation = config.logFileLocation
+	logFileSize = config.logFileSize
 
-// 	// colon separated key value pairs
-// 	// Example: "router.GA=DEBUG:warehouse.REDSHIFT=DEBUG"
-// 	levelConfigStr := config.GetString("Logger.moduleLevels", "")
-// 	levelConfig = make(map[string]int)
-// 	levelConfigStr = strings.TrimSpace(levelConfigStr)
-// 	if levelConfigStr != "" {
-// 		moduleLevelKVs := strings.Split(levelConfigStr, ":")
-// 		for _, moduleLevelKV := range moduleLevelKVs {
-// 			pair := strings.SplitN(moduleLevelKV, "=", 2)
-// 			if len(pair) < 2 {
-// 				continue
-// 			}
-// 			module := strings.TrimSpace(pair[0])
-// 			if module == "" {
-// 				continue
-// 			}
+	// colon separated key value pairs
+	// Example: "router.GA=DEBUG:warehouse.REDSHIFT=DEBUG"
+	levelConfigStr := config.levelConfigStr
+	levelConfig = make(map[string]int)
+	levelConfigStr = strings.TrimSpace(levelConfigStr)
+	if levelConfigStr != "" {
+		moduleLevelKVs := strings.Split(levelConfigStr, ":")
+		for _, moduleLevelKV := range moduleLevelKVs {
+			pair := strings.SplitN(moduleLevelKV, "=", 2)
+			if len(pair) < 2 {
+				continue
+			}
+			module := strings.TrimSpace(pair[0])
+			if module == "" {
+				continue
+			}
 
-// 			levelStr := strings.TrimSpace(pair[1])
-// 			level, ok := levelMap[levelStr]
-// 			if !ok {
-// 				continue
-// 			}
-// 			levelConfig[module] = level
-// 		}
-// 	}
-// }
+			levelStr := strings.TrimSpace(pair[1])
+			level, ok := levelMap[levelStr]
+			if !ok {
+				continue
+			}
+			levelConfig[module] = level
+		}
+	}
+}
 
 var options []zap.Option
 
@@ -170,6 +170,7 @@ func checkAndValidateConfig(configList []interface{}) ConfigLogger {
 
 func NewLogger(configList ...interface{}) *LoggerT {
 	config := checkAndValidateConfig(configList)
+	loadConfig(config)
 	enableConsole = config.enableConsole
 	enableFile = config.enableFile
 	consoleJsonFormat = config.consoleJsonFormat
@@ -186,7 +187,7 @@ func NewLogger(configList ...interface{}) *LoggerT {
 // Setup sets up the logger initially
 func init() {
 	//	loadConfig()
-	DefaultConfigLogger = ConfigLogger{enableConsole: true, enableFile: false, consoleJsonFormat: false, fileJsonFormat: false, logFileLocation: "/tmp/rudder_log.log", logFileSize: 100, enableTimestamp: true, enableFileNameInLog: false, enableStackTrace: false}
+	DefaultConfigLogger = ConfigLogger{enableConsole: true, enableFile: false, consoleJsonFormat: false, fileJsonFormat: false, logFileLocation: "/tmp/rudder_log.log", logFileSize: 100, enableTimestamp: true, enableFileNameInLog: false, enableStackTrace: false, levelConfigStr: ""}
 	Log = configureLogger()
 	loggerLevelsCache = make(map[string]int)
 }
