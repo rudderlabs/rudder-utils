@@ -86,7 +86,7 @@ var DefaultConfigDiagnostics = ConfigDiagnostics{EnableDiagnostics: true, endpoi
 // 	loadConfig()
 // }
 
-func loadConfig(configList ...interface{}) {
+func LoadConfig(configList ...interface{}) {
 	config := checkAndValidateConfig((configList))
 	EnableDiagnostics = config.EnableDiagnostics
 	endpoint = config.endpoint
