@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rudderlabs/rudder-server/config"
 	"github.com/rudderlabs/rudder-utils/logger"
 	"github.com/rudderlabs/rudder-utils/rruntime"
 	"gopkg.in/alexcesaro/statsd.v2"
@@ -30,6 +29,7 @@ var statsCollectionInterval int64
 var enableCPUStats bool
 var enableMemStats bool
 var enableGCStats bool
+var errorFilePath string
 var rc runtimeStatsCollector
 var pkgLogger logger.LoggerI
 var statsSamplingRate float32
@@ -37,20 +37,38 @@ var statsSamplingRate float32
 // DefaultStats is a common implementation of StatsD stats managements
 var DefaultStats Stats
 
-func init() {
-	statsEnabled = config.GetBool("enableStats", false)
-	statsdServerURL = config.GetEnv("STATSD_SERVER_URL", "localhost:8125")
-	instanceID = config.GetEnv("INSTANCE_ID", "")
-	enabled = config.GetBool("RuntimeStats.enabled", true)
-	statsCollectionInterval = config.GetInt64("RuntimeStats.statsCollectionInterval", 10)
-	enableCPUStats = config.GetBool("RuntimeStats.enableCPUStats", true)
-	enableMemStats = config.GetBool("RuntimeStats.enabledMemStats", true)
-	enableGCStats = config.GetBool("RuntimeStats.enableGCStats", true)
-	statsSamplingRate = float32(config.GetFloat64("statsSamplingRate", 1))
-
-	pkgLogger = logger.NewLogger().Child("stats")
-
+type ConfigStats struct {
+	statsEnabled            bool
+	statsdServerURL         string
+	instanceID              string
+	enabled                 bool
+	statsCollectionInterval int
+	enableCPUStats          bool
+	enableGCStats           bool
+	enableMemStats          bool
+	statsSamplingRate       int
+	errorFilePath           string
+	kubeNameSpace           string
+	configLog               logger.ConfigLogger
 }
+
+// func init() {
+// 	statsEnabled = config.GetBool("enableStats", false)
+// 	statsdServerURL = config.GetEnv("STATSD_SERVER_URL", "localhost:8125")
+// 	instanceID = config.GetEnv("INSTANCE_ID", "")
+// 	enabled = config.GetBool("RuntimeStats.enabled", true)
+// 	statsCollectionInterval = config.GetInt64("RuntimeStats.statsCollectionInterval", 10)
+// 	enableCPUStats = config.GetBool("RuntimeStats.enableCPUStats", true)
+// 	enableMemStats = config.GetBool("RuntimeStats.enabledMemStats", true)
+// 	enableGCStats = config.GetBool("RuntimeStats.enableGCStats", true)
+// 	statsSamplingRate = float32(config.GetFloat64("statsSamplingRate", 1))
+
+// 	pkgLogger = logger.NewLogger().Child("stats")
+
+// }
+
+var DefaultConfigStats = ConfigStats{statsEnabled: false, statsdServerURL: "localhost:8125", instanceID: "", enabled: true, statsCollectionInterval: 10, enableCPUStats: true, enableMemStats: true, enableGCStats: true, statsSamplingRate: 1, configLog: logger.DefaultConfigLogger, errorFilePath: "/tmp/error_store.json", kubeNameSpace: ""}
+var kubeNameSpace string
 
 type Tags map[string]string
 
@@ -88,10 +106,34 @@ type RudderStatsT struct {
 	dontProcess bool
 }
 
+func checkAndValidateConfig(configList []interface{}) ConfigStats {
+	if len(configList) != 1 {
+		return DefaultConfigStats
+	}
+	switch configList[0].(type) {
+	case ConfigStats:
+		return configList[0].(ConfigStats)
+	default:
+		return DefaultConfigStats
+	}
+}
+
 //Setup creates a new statsd client
-func Setup() {
+func Setup(configList ...interface{}) {
 	var err error
+	config := checkAndValidateConfig(configList)
+	pkgLogger = logger.NewLogger(config.configLog).Child("stats")
+	statsEnabled = config.statsEnabled
+	statsdServerURL = config.statsdServerURL
+	instanceID = config.instanceID
+	enabled = config.enabled
+	statsCollectionInterval = int64(config.statsCollectionInterval)
+	enableCPUStats = config.enableCPUStats
+	enableGCStats = config.enableGCStats
+	statsSamplingRate = float32(config.statsSamplingRate)
+	errorFilePath = config.errorFilePath
 	conn = statsd.Address(statsdServerURL)
+	kubeNameSpace = config.kubeNameSpace
 	//TODO: Add tags by calling a function...
 	client, err = statsd.New(conn, statsd.TagsFormat(statsd.InfluxDB), defaultTags())
 	if err != nil {
@@ -103,7 +145,7 @@ func Setup() {
 	if client != nil {
 		rruntime.Go(func() {
 			collectRuntimeStats(client)
-		})
+		}, errorFilePath)
 	}
 
 	DefaultStats = &HandleT{}
@@ -266,14 +308,15 @@ func StopRuntimeStats() {
 }
 
 // returns value stored in KUBE_NAMESPACE env var
-func getKubeNamespace() string {
-	return config.GetEnv("KUBE_NAMESPACE", "")
+func getKubeNamespace(kubeNameSpace string) string {
+	return kubeNameSpace
 }
 
 // returns default Tags to the telegraf request
+// Send kube_namespace from config.toml as
 func defaultTags() statsd.Option {
-	if len(getKubeNamespace()) > 0 {
-		return statsd.Tags("instanceName", instanceID, "namespace", getKubeNamespace())
+	if len(getKubeNamespace(kubeNameSpace)) > 0 {
+		return statsd.Tags("instanceName", instanceID, "namespace", getKubeNamespace(kubeNameSpace))
 	}
 	return statsd.Tags("instanceName", instanceID)
 }

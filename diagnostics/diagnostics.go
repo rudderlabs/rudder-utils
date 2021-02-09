@@ -4,8 +4,7 @@ import (
 	"time"
 
 	"github.com/rudderlabs/analytics-go"
-	"github.com/rudderlabs/rudder-server/config"
-	"github.com/rudderlabs/rudder-server/utils/misc"
+	"github.com/rudderlabs/rudder-utils/utils/misc"
 )
 
 const (
@@ -63,33 +62,66 @@ type diagnostics struct {
 	UniqueId   string
 	UserId     string
 	InstanceId string
+	config     ConfigDiagnostics
 }
 
-func init() {
-	loadConfig()
+type ConfigDiagnostics struct {
+	EnableDiagnostics               bool
+	endpoint                        string
+	writekey                        string
+	EnableServerStartMetric         bool
+	EnableConfigIdentifyMetric      bool
+	EnableServerStartedMetric       bool
+	EnableConfigProcessedMetric     bool
+	EnableGatewayMetric             bool
+	EnableRouterMetric              bool
+	EnableBatchRouterMetric         bool
+	EnableDestinationFailuresMetric bool
+	instanceID                      string
 }
 
-func loadConfig() {
-	EnableDiagnostics = config.GetBool("Diagnostics.enableDiagnostics", true)
-	endpoint = config.GetString("Diagnostics.endpoint", "https://rudderstack-dataplane.rudderstack.com")
-	writekey = config.GetString("Diagnostics.writekey", "1aWPBIROQvFYW9FHxgc03nUsLza")
-	EnableServerStartMetric = config.GetBool("Diagnostics.enableServerStartMetric", true)
-	EnableConfigIdentifyMetric = config.GetBool("Diagnostics.enableConfigIdentifyMetric", true)
-	EnableServerStartedMetric = config.GetBool("Diagnostics.enableServerStartedMetric", true)
-	EnableConfigProcessedMetric = config.GetBool("Diagnostics.enableConfigProcessedMetric", true)
-	EnableGatewayMetric = config.GetBool("Diagnostics.enableGatewayMetric", true)
-	EnableRouterMetric = config.GetBool("Diagnostics.enableRouterMetric", true)
-	EnableBatchRouterMetric = config.GetBool("Diagnostics.enableBatchRouterMetric", true)
-	EnableDestinationFailuresMetric = config.GetBool("Diagnostics.enableDestinationFailuresMetric", true)
-	Diagnostics = newDiagnostics()
+var DefaultConfigDiagnostics = ConfigDiagnostics{EnableDiagnostics: true, endpoint: "https://rudderstack-dataplane.rudderstack.com", writekey: "1aWPBIROQvFYW9FHxgc03nUsLza", EnableServerStartMetric: true, EnableConfigIdentifyMetric: true, EnableServerStartedMetric: true, EnableConfigProcessedMetric: true, EnableGatewayMetric: true, EnableRouterMetric: true, EnableBatchRouterMetric: true, EnableDestinationFailuresMetric: true, instanceID: "1"}
+
+// func init() {
+// 	loadConfig()
+// }
+
+func loadConfig(configList ...interface{}) {
+	config := checkAndValidateConfig((configList))
+	EnableDiagnostics = config.EnableDiagnostics
+	endpoint = config.endpoint
+	writekey = config.writekey
+	EnableServerStartMetric = config.EnableServerStartMetric
+	EnableConfigIdentifyMetric = config.EnableConfigIdentifyMetric
+	EnableServerStartedMetric = config.EnableServerStartedMetric
+	EnableConfigProcessedMetric = config.EnableConfigProcessedMetric
+	EnableGatewayMetric = config.EnableGatewayMetric
+	EnableRouterMetric = config.EnableRouterMetric
+	EnableBatchRouterMetric = config.EnableBatchRouterMetric
+	EnableDestinationFailuresMetric = config.EnableDestinationFailuresMetric
+	Diagnostics = newDiagnostics(config)
 }
 
 // newDiagnostics return new instace of diagnostics
-func newDiagnostics() *diagnostics {
-	instanceId := config.GetEnv("INSTANCE_ID", "1")
 
-	client := analytics.New(writekey, endpoint)
+func checkAndValidateConfig(configList []interface{}) ConfigDiagnostics {
+	if len(configList) != 1 {
+		return DefaultConfigDiagnostics
+	}
+	switch configList[0].(type) {
+	case ConfigDiagnostics:
+		return configList[0].(ConfigDiagnostics)
+	default:
+		return DefaultConfigDiagnostics
+	}
+}
+
+func newDiagnostics(config ConfigDiagnostics) *diagnostics {
+	instanceId := config.instanceID
+
+	client := analytics.New(config.writekey, config.endpoint)
 	return &diagnostics{
+		config:     config,
 		InstanceId: instanceId,
 		Client:     client,
 		StartTime:  time.Now(),
@@ -98,7 +130,7 @@ func newDiagnostics() *diagnostics {
 }
 
 func (d *diagnostics) Track(event string, properties map[string]interface{}) {
-	if EnableDiagnostics {
+	if d.config.EnableDiagnostics {
 		properties[StartTime] = d.StartTime
 		properties[InstanceId] = d.InstanceId
 
@@ -120,12 +152,12 @@ func Track(event string, properties map[string]interface{}) {
 
 func (d *diagnostics) DisableMetrics(enableMetrics bool) {
 	if !enableMetrics {
-		EnableServerStartedMetric = false
-		EnableConfigProcessedMetric = false
-		EnableGatewayMetric = false
-		EnableRouterMetric = false
-		EnableBatchRouterMetric = false
-		EnableDestinationFailuresMetric = false
+		d.config.EnableServerStartedMetric = false
+		d.config.EnableConfigProcessedMetric = false
+		d.config.EnableGatewayMetric = false
+		d.config.EnableRouterMetric = false
+		d.config.EnableBatchRouterMetric = false
+		d.config.EnableDestinationFailuresMetric = false
 	}
 }
 
@@ -135,7 +167,7 @@ func DisableMetrics(enableMetrics bool) {
 }
 
 func (d *diagnostics) Identify(properties map[string]interface{}) {
-	if EnableDiagnostics {
+	if d.config.EnableDiagnostics {
 		// add in traits
 		if val, ok := properties[ConfigIdentify]; ok {
 			d.UserId = val.(string)

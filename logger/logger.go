@@ -5,7 +5,7 @@ usage example
 
 import (
 	"errors"
-	"github.com/rudderlabs/rudder-server/utils/logger"
+	"github.com/rudderlabs/rudder-utils/logger"
 )
 
 var	log logger.LoggerI  = &logger.LoggerT{}
@@ -22,14 +22,12 @@ package logger
 import (
 	"bytes"
 	"errors"
+	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
 	"runtime"
 	"strings"
 	"sync"
-
-	"github.com/rudderlabs/rudder-server/config"
-	"go.uber.org/zap"
 )
 
 /*
@@ -60,6 +58,21 @@ type LoggerI interface {
 type LoggerT struct {
 	name   string
 	parent *LoggerT
+	config ConfigLogger
+}
+
+type ConfigLogger struct {
+	rootLevel           string
+	enableConsole       bool
+	enableFile          bool
+	consoleJsonFormat   bool
+	fileJsonFormat      bool
+	logFileLocation     string
+	logFileSize         int
+	enableTimestamp     bool
+	enableFileNameInLog bool
+	enableStackTrace    bool
+	levelConfigStr      string
 }
 
 const (
@@ -91,64 +104,89 @@ var (
 	enableStackTrace    bool
 	logFileLocation     string
 	logFileSize         int
+	DefaultConfigLogger ConfigLogger
 )
 
 var (
-	Log               *zap.SugaredLogger
-	log               = NewLogger()
+	Log *zap.SugaredLogger
+	//	log               = NewLogger()    Need to check where is it being used???????Somewhere in the previous package ?
 	levelConfig       map[string]int
 	loggerLevelsCache map[string]int
 	levelConfigLock   sync.RWMutex
 )
 
-func loadConfig() {
-	rootLevel = levelMap[config.GetEnv("LOG_LEVEL", "INFO")]
-	enableConsole = config.GetBool("Logger.enableConsole", true)
-	enableFile = config.GetBool("Logger.enableFile", false)
-	consoleJsonFormat = config.GetBool("Logger.consoleJsonFormat", false)
-	fileJsonFormat = config.GetBool("Logger.fileJsonFormat", false)
-	logFileLocation = config.GetString("Logger.logFileLocation", "/tmp/rudder_log.log")
-	logFileSize = config.GetInt("Logger.logFileSize", 100)
-	enableTimestamp = config.GetBool("Logger.enableTimestamp", true)
-	enableFileNameInLog = config.GetBool("Logger.enableFileNameInLog", false)
-	enableStackTrace = config.GetBool("Logger.enableStackTrace", false)
+// func loadConfig() {
+// 	rootLevel = levelMap[config.GetEnv("LOG_LEVEL", "INFO")]
+// 	enableConsole = config.GetBool("Logger.enableConsole", true)
+// 	enableFile = config.GetBool("Logger.enableFile", false)
+// 	consoleJsonFormat = config.GetBool("Logger.consoleJsonFormat", false)
+// 	fileJsonFormat = config.GetBool("Logger.fileJsonFormat", false)
+// 	logFileLocation = config.GetString("Logger.logFileLocation", "/tmp/rudder_log.log")
+// 	logFileSize = config.GetInt("Logger.logFileSize", 100)
+// 	enableTimestamp = config.GetBool("Logger.enableTimestamp", true)
+// 	enableFileNameInLog = config.GetBool("Logger.enableFileNameInLog", false)
+// 	enableStackTrace = config.GetBool("Logger.enableStackTrace", false)
 
-	// colon separated key value pairs
-	// Example: "router.GA=DEBUG:warehouse.REDSHIFT=DEBUG"
-	levelConfigStr := config.GetString("Logger.moduleLevels", "")
-	levelConfig = make(map[string]int)
-	levelConfigStr = strings.TrimSpace(levelConfigStr)
-	if levelConfigStr != "" {
-		moduleLevelKVs := strings.Split(levelConfigStr, ":")
-		for _, moduleLevelKV := range moduleLevelKVs {
-			pair := strings.SplitN(moduleLevelKV, "=", 2)
-			if len(pair) < 2 {
-				continue
-			}
-			module := strings.TrimSpace(pair[0])
-			if module == "" {
-				continue
-			}
+// 	// colon separated key value pairs
+// 	// Example: "router.GA=DEBUG:warehouse.REDSHIFT=DEBUG"
+// 	levelConfigStr := config.GetString("Logger.moduleLevels", "")
+// 	levelConfig = make(map[string]int)
+// 	levelConfigStr = strings.TrimSpace(levelConfigStr)
+// 	if levelConfigStr != "" {
+// 		moduleLevelKVs := strings.Split(levelConfigStr, ":")
+// 		for _, moduleLevelKV := range moduleLevelKVs {
+// 			pair := strings.SplitN(moduleLevelKV, "=", 2)
+// 			if len(pair) < 2 {
+// 				continue
+// 			}
+// 			module := strings.TrimSpace(pair[0])
+// 			if module == "" {
+// 				continue
+// 			}
 
-			levelStr := strings.TrimSpace(pair[1])
-			level, ok := levelMap[levelStr]
-			if !ok {
-				continue
-			}
-			levelConfig[module] = level
-		}
-	}
-}
+// 			levelStr := strings.TrimSpace(pair[1])
+// 			level, ok := levelMap[levelStr]
+// 			if !ok {
+// 				continue
+// 			}
+// 			levelConfig[module] = level
+// 		}
+// 	}
+// }
 
 var options []zap.Option
 
-func NewLogger() *LoggerT {
-	return &LoggerT{}
+func checkAndValidateConfig(configList []interface{}) ConfigLogger {
+	if len(configList) != 1 {
+		return DefaultConfigLogger
+	}
+	switch configList[0].(type) {
+	case ConfigLogger:
+		return configList[0].(ConfigLogger)
+	default:
+		return DefaultConfigLogger
+	}
+}
+
+func NewLogger(configList ...interface{}) *LoggerT {
+	config := checkAndValidateConfig(configList)
+	enableConsole = config.enableConsole
+	enableFile = config.enableFile
+	consoleJsonFormat = config.consoleJsonFormat
+	fileJsonFormat = config.fileJsonFormat
+	rootLevel = levelMap[config.rootLevel]
+	enableTimestamp = config.enableTimestamp
+	enableFileNameInLog = config.enableFileNameInLog
+	enableStackTrace = config.enableStackTrace
+	logFileLocation = config.logFileLocation
+	logFileSize = config.logFileSize
+	return &LoggerT{config: config}
 }
 
 // Setup sets up the logger initially
 func init() {
-	loadConfig()
+	//	loadConfig()
+	DefaultConfigLogger = ConfigLogger{enableConsole: true, enableFile: false, consoleJsonFormat: false, fileJsonFormat: false, logFileLocation: "/tmp/rudder_log.log", logFileSize: 100, enableTimestamp: true, enableFileNameInLog: false, enableStackTrace: false}
 	Log = configureLogger()
 	loggerLevelsCache = make(map[string]int)
 }
@@ -172,7 +210,7 @@ func (l *LoggerT) getLoggingLevel() int {
 	var level int
 	levelConfigLock.RLock()
 	if l.name == "" {
-		level = rootLevel
+		level = levelMap[l.config.rootLevel]
 		found = true
 	}
 	if !found {
@@ -260,7 +298,7 @@ func (l *LoggerT) Fatal(args ...interface{}) {
 
 		//If enableStackTrace is true, Zaplogger will take care of writing stacktrace to the file.
 		//Else, we are force writing the stacktrace to the file.
-		if !enableStackTrace {
+		if !l.config.enableStackTrace {
 			byteArr := make([]byte, 2048)
 			n := runtime.Stack(byteArr, false)
 			stackTrace := string(byteArr[:n])
@@ -310,7 +348,7 @@ func (l *LoggerT) Fatalf(format string, args ...interface{}) {
 
 		//If enableStackTrace is true, Zaplogger will take care of writing stacktrace to the file.
 		//Else, we are force writing the stacktrace to the file.
-		if !enableStackTrace {
+		if !l.config.enableStackTrace {
 			byteArr := make([]byte, 2048)
 			n := runtime.Stack(byteArr, false)
 			stackTrace := string(byteArr[:n])

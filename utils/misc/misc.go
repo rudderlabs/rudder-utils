@@ -28,7 +28,6 @@ import (
 
 	"github.com/araddon/dateparse"
 	"github.com/hashicorp/go-retryablehttp"
-	"github.com/rudderlabs/rudder-server/config"
 	"github.com/rudderlabs/rudder-utils/logger"
 	uuid "github.com/satori/go.uuid"
 
@@ -62,12 +61,12 @@ type RudderError struct {
 var pkgLogger logger.LoggerI
 
 func init() {
-	pkgLogger = logger.NewLogger().Child("utils").Child("misc")
+	pkgLogger = logger.NewLogger(logger.DefaultConfigLogger).Child("utils").Child("misc")
 }
 
-func getErrorStore() (ErrorStoreT, error) {
+func getErrorStore(errorStorePath string) (ErrorStoreT, error) {
 	var errorStore ErrorStoreT
-	errorStorePath := config.GetString("recovery.errorStorePath", "/tmp/error_store.json")
+	//errorStorePath := config.GetString("recovery.errorStorePath", "/tmp/error_store.json")
 	data, err := ioutil.ReadFile(errorStorePath)
 	if os.IsNotExist(err) {
 		defaultErrorStoreJSON := "{\"Errors\":[]}"
@@ -88,13 +87,13 @@ func getErrorStore() (ErrorStoreT, error) {
 	return errorStore, nil
 }
 
-func saveErrorStore(errorStore ErrorStoreT) {
+func saveErrorStore(errorStore ErrorStoreT, errorStorePath string) {
 	errorStoreJSON, err := json.MarshalIndent(&errorStore, "", " ")
 	if err != nil {
 		pkgLogger.Fatal("failed to marshal errorStore", errorStore)
 		return
 	}
-	errorStorePath := config.GetString("recovery.errorStorePath", "/tmp/error_store.json")
+	//errorStorePath := config.GetString("recovery.errorStorePath", "/tmp/error_store.json")
 	err = ioutil.WriteFile(errorStorePath, errorStoreJSON, 0644)
 	if err != nil {
 		pkgLogger.Fatal("failed to write to errorStore")
@@ -111,7 +110,7 @@ func AppendError(callingMethodName string, firstError *error, secondError *error
 }
 
 //RecordAppError appends the error occured to error_store.json
-func RecordAppError(err error) {
+func RecordAppError(err error, errorStorePath string) {
 	if err == nil {
 		return
 	}
@@ -124,7 +123,7 @@ func RecordAppError(err error) {
 	n := runtime.Stack(byteArr, false)
 	stackTrace := string(byteArr[:n])
 
-	errorStore, localErr := getErrorStore()
+	errorStore, localErr := getErrorStore(errorStorePath)
 	if localErr != nil || errorStore.Errors == nil {
 		return
 	}
@@ -142,7 +141,7 @@ func RecordAppError(err error) {
 			StackTrace:        stackTrace,
 			Code:              101,
 		})
-	saveErrorStore(errorStore)
+	saveErrorStore(errorStore, errorStorePath)
 }
 
 func AssertErrorIfDev(err error) {
@@ -312,8 +311,8 @@ func ReadLines(path string) ([]string, error) {
 }
 
 // CreateTMPDIR creates tmp dir at path configured via RUDDER_TMPDIR env var
-func CreateTMPDIR() (string, error) {
-	tmpdirPath := strings.TrimSuffix(config.GetEnv("RUDDER_TMPDIR", ""), "/")
+func CreateTMPDIR(rudderTmpDir string) (string, error) {
+	tmpdirPath := strings.TrimSuffix(rudderTmpDir, "/")
 	// second chance: fallback to /tmp if this folder exists
 	if tmpdirPath == "" {
 		fallbackPath := "/tmp"
@@ -770,15 +769,17 @@ func HasAWSKeysInConfig(config interface{}) bool {
 	return true
 }
 
-func GetObjectStorageConfig(provider string, objectStorageConfig interface{}) map[string]interface{} {
+func GetObjectStorageConfig(provider string, objectStorageConfig interface{}, accessKeyID string, accessKey string) map[string]interface{} {
 	objectStorageConfigMap := objectStorageConfig.(map[string]interface{})
 	if provider == "S3" && !HasAWSKeysInConfig(objectStorageConfig) {
 		clonedObjectStorageConfig := make(map[string]interface{})
 		for k, v := range objectStorageConfigMap {
 			clonedObjectStorageConfig[k] = v
 		}
-		clonedObjectStorageConfig["accessKeyID"] = config.GetEnv("RUDDER_AWS_S3_COPY_USER_ACCESS_KEY_ID", "")
-		clonedObjectStorageConfig["accessKey"] = config.GetEnv("RUDDER_AWS_S3_COPY_USER_ACCESS_KEY", "")
+		// clonedObjectStorageConfig["accessKeyID"] = config.GetEnv("RUDDER_AWS_S3_COPY_USER_ACCESS_KEY_ID", "")
+		// clonedObjectStorageConfig["accessKey"] = config.GetEnv("RUDDER_AWS_S3_COPY_USER_ACCESS_KEY", "")
+		clonedObjectStorageConfig["accessKeyID"] = accessKeyID
+		clonedObjectStorageConfig["accessKey"] = accessKey
 		return clonedObjectStorageConfig
 	}
 	return objectStorageConfigMap
@@ -796,10 +797,10 @@ func GetSpacesLocation(location string) (region string) {
 }
 
 //GetNodeID returns the nodeId of the current node
-func GetNodeID() string {
-	nodeID := config.GetRequiredEnv("INSTANCE_ID")
-	return nodeID
-}
+// func GetNodeID() string {
+// 	nodeID := config.GetRequiredEnv("INSTANCE_ID")
+// 	return nodeID
+// }
 
 //MakeRetryablePostRequest is Util function to make a post request.
 func MakeRetryablePostRequest(url string, endpoint string, data interface{}) (response []byte, statusCode int, err error) {

@@ -13,7 +13,7 @@ import (
 var pkgLogger logger.LoggerI
 
 func init() {
-	pkgLogger = logger.NewLogger().Child("rruntime")
+	pkgLogger = logger.NewLogger(logger.DefaultConfigLogger).Child("rruntime")
 }
 
 //Go Starts the excution of the function passed as argument in a new Goroutine
@@ -28,7 +28,7 @@ func init() {
 //    rruntime.Go(func() {
 //      	rt.workerProcess(worker)
 //    })
-func Go(function func()) {
+func Go(function func(), errorPath string) {
 	go func() {
 		ctx := bugsnag.StartSession(context.Background())
 		defer func() {
@@ -38,7 +38,7 @@ func Go(function func()) {
 						"Number": runtime.NumGoroutine(),
 					}})
 
-				misc.RecordAppError(fmt.Errorf("%v", r))
+				misc.RecordAppError(fmt.Errorf("%v", r), errorPath)
 				pkgLogger.Fatal(r)
 				panic(r)
 			}
