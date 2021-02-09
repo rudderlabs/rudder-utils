@@ -171,16 +171,6 @@ func checkAndValidateConfig(configList []interface{}) ConfigLogger {
 func NewLogger(configList ...interface{}) *LoggerT {
 	config := checkAndValidateConfig(configList)
 	loadConfig(config)
-	enableConsole = config.enableConsole
-	enableFile = config.enableFile
-	consoleJsonFormat = config.consoleJsonFormat
-	fileJsonFormat = config.fileJsonFormat
-	rootLevel = levelMap[config.rootLevel]
-	enableTimestamp = config.enableTimestamp
-	enableFileNameInLog = config.enableFileNameInLog
-	enableStackTrace = config.enableStackTrace
-	logFileLocation = config.logFileLocation
-	logFileSize = config.logFileSize
 	return &LoggerT{config: config}
 }
 
