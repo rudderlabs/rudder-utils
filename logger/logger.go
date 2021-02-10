@@ -62,17 +62,17 @@ type LoggerT struct {
 }
 
 type ConfigLogger struct {
-	rootLevel           string
-	enableConsole       bool
-	enableFile          bool
-	consoleJsonFormat   bool
-	fileJsonFormat      bool
-	logFileLocation     string
-	logFileSize         int
-	enableTimestamp     bool
-	enableFileNameInLog bool
-	enableStackTrace    bool
-	levelConfigStr      string
+	RootLevel           string
+	EnableConsole       bool
+	EnableFile          bool
+	ConsoleJsonFormat   bool
+	FileJsonFormat      bool
+	LogFileLocation     string
+	LogFileSize         int
+	EnableTimestamp     bool
+	EnableFileNameInLog bool
+	EnableStackTrace    bool
+	LevelConfigStr      string
 }
 
 const (
@@ -116,20 +116,20 @@ var (
 )
 
 func loadConfig(config ConfigLogger) {
-	enableConsole = config.enableConsole
-	enableFile = config.enableFile
-	consoleJsonFormat = config.consoleJsonFormat
-	fileJsonFormat = config.fileJsonFormat
-	rootLevel = levelMap[config.rootLevel]
-	enableTimestamp = config.enableTimestamp
-	enableFileNameInLog = config.enableFileNameInLog
-	enableStackTrace = config.enableStackTrace
-	logFileLocation = config.logFileLocation
-	logFileSize = config.logFileSize
+	enableConsole = config.EnableConsole
+	enableFile = config.EnableFile
+	consoleJsonFormat = config.ConsoleJsonFormat
+	fileJsonFormat = config.FileJsonFormat
+	rootLevel = levelMap[config.RootLevel]
+	enableTimestamp = config.EnableTimestamp
+	enableFileNameInLog = config.EnableFileNameInLog
+	enableStackTrace = config.EnableStackTrace
+	logFileLocation = config.LogFileLocation
+	logFileSize = config.LogFileSize
 
 	// colon separated key value pairs
 	// Example: "router.GA=DEBUG:warehouse.REDSHIFT=DEBUG"
-	levelConfigStr := config.levelConfigStr
+	levelConfigStr := config.LevelConfigStr
 	levelConfig = make(map[string]int)
 	levelConfigStr = strings.TrimSpace(levelConfigStr)
 	if levelConfigStr != "" {
@@ -177,7 +177,7 @@ func NewLogger(configList ...interface{}) *LoggerT {
 // Setup sets up the logger initially
 func init() {
 	//	loadConfig()
-	DefaultConfigLogger = ConfigLogger{enableConsole: true, enableFile: false, consoleJsonFormat: false, fileJsonFormat: false, logFileLocation: "/tmp/rudder_log.log", logFileSize: 100, enableTimestamp: true, enableFileNameInLog: false, enableStackTrace: false, levelConfigStr: ""}
+	DefaultConfigLogger = ConfigLogger{EnableConsole: true, EnableFile: false, ConsoleJsonFormat: false, FileJsonFormat: false, LogFileLocation: "/tmp/rudder_log.log", LogFileSize: 100, EnableTimestamp: true, EnableFileNameInLog: false, EnableStackTrace: false, LevelConfigStr: ""}
 	Log = configureLogger()
 	loggerLevelsCache = make(map[string]int)
 }
@@ -201,7 +201,7 @@ func (l *LoggerT) getLoggingLevel() int {
 	var level int
 	levelConfigLock.RLock()
 	if l.name == "" {
-		level = levelMap[l.config.rootLevel]
+		level = levelMap[l.config.RootLevel]
 		found = true
 	}
 	if !found {
@@ -289,7 +289,7 @@ func (l *LoggerT) Fatal(args ...interface{}) {
 
 		//If enableStackTrace is true, Zaplogger will take care of writing stacktrace to the file.
 		//Else, we are force writing the stacktrace to the file.
-		if !l.config.enableStackTrace {
+		if !l.config.EnableStackTrace {
 			byteArr := make([]byte, 2048)
 			n := runtime.Stack(byteArr, false)
 			stackTrace := string(byteArr[:n])
@@ -339,7 +339,7 @@ func (l *LoggerT) Fatalf(format string, args ...interface{}) {
 
 		//If enableStackTrace is true, Zaplogger will take care of writing stacktrace to the file.
 		//Else, we are force writing the stacktrace to the file.
-		if !l.config.enableStackTrace {
+		if !l.config.EnableStackTrace {
 			byteArr := make([]byte, 2048)
 			n := runtime.Stack(byteArr, false)
 			stackTrace := string(byteArr[:n])

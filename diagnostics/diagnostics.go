@@ -67,8 +67,8 @@ type diagnostics struct {
 
 type ConfigDiagnostics struct {
 	EnableDiagnostics               bool
-	endpoint                        string
-	writekey                        string
+	Endpoint                        string
+	Writekey                        string
 	EnableServerStartMetric         bool
 	EnableConfigIdentifyMetric      bool
 	EnableServerStartedMetric       bool
@@ -77,10 +77,10 @@ type ConfigDiagnostics struct {
 	EnableRouterMetric              bool
 	EnableBatchRouterMetric         bool
 	EnableDestinationFailuresMetric bool
-	instanceID                      string
+	InstanceID                      string
 }
 
-var DefaultConfigDiagnostics = ConfigDiagnostics{EnableDiagnostics: true, endpoint: "https://rudderstack-dataplane.rudderstack.com", writekey: "1aWPBIROQvFYW9FHxgc03nUsLza", EnableServerStartMetric: true, EnableConfigIdentifyMetric: true, EnableServerStartedMetric: true, EnableConfigProcessedMetric: true, EnableGatewayMetric: true, EnableRouterMetric: true, EnableBatchRouterMetric: true, EnableDestinationFailuresMetric: true, instanceID: "1"}
+var DefaultConfigDiagnostics = ConfigDiagnostics{EnableDiagnostics: true, Endpoint: "https://rudderstack-dataplane.rudderstack.com", Writekey: "1aWPBIROQvFYW9FHxgc03nUsLza", EnableServerStartMetric: true, EnableConfigIdentifyMetric: true, EnableServerStartedMetric: true, EnableConfigProcessedMetric: true, EnableGatewayMetric: true, EnableRouterMetric: true, EnableBatchRouterMetric: true, EnableDestinationFailuresMetric: true, InstanceID: "1"}
 
 // func init() {
 // 	loadConfig()
@@ -89,8 +89,8 @@ var DefaultConfigDiagnostics = ConfigDiagnostics{EnableDiagnostics: true, endpoi
 func LoadConfig(configList ...interface{}) {
 	config := checkAndValidateConfig((configList))
 	EnableDiagnostics = config.EnableDiagnostics
-	endpoint = config.endpoint
-	writekey = config.writekey
+	endpoint = config.Endpoint
+	writekey = config.Writekey
 	EnableServerStartMetric = config.EnableServerStartMetric
 	EnableConfigIdentifyMetric = config.EnableConfigIdentifyMetric
 	EnableServerStartedMetric = config.EnableServerStartedMetric
@@ -117,9 +117,9 @@ func checkAndValidateConfig(configList []interface{}) ConfigDiagnostics {
 }
 
 func newDiagnostics(config ConfigDiagnostics) *diagnostics {
-	instanceId := config.instanceID
+	instanceId := config.InstanceID
 
-	client := analytics.New(config.writekey, config.endpoint)
+	client := analytics.New(config.Writekey, config.Endpoint)
 	return &diagnostics{
 		config:     config,
 		InstanceId: instanceId,

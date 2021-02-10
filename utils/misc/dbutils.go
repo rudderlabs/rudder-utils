@@ -13,22 +13,22 @@ var (
 )
 
 type ConfigDBUtils struct {
-	host     string
-	user     string
-	port     int
-	password string
-	sslmode  string
+	Host     string
+	User     string
+	Port     int
+	Password string
+	Sslmode  string
 }
 
 func loadConfig(config ConfigDBUtils) {
-	host = config.host
-	user = config.user
-	port = config.port
-	password = config.password // Reading secrets from
-	sslmode = config.sslmode
+	host = config.Host
+	user = config.User
+	port = config.Port
+	password = config.Password // Reading secrets from
+	sslmode = config.Sslmode
 }
 
-var DefaultConfigDBUtils = ConfigDBUtils{host: "localhost", user: "ubuntu", port: 5432, password: "ubuntu", sslmode: "disable"}
+var DefaultConfigDBUtils = ConfigDBUtils{Host: "localhost", User: "ubuntu", Port: 5432, Password: "ubuntu", Sslmode: "disable"}
 
 /*
 ReplaceDB : Rename the OLD DB and create a new one.

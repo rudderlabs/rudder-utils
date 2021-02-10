@@ -38,18 +38,18 @@ var statsSamplingRate float32
 var DefaultStats Stats
 
 type ConfigStats struct {
-	statsEnabled            bool
-	statsdServerURL         string
-	instanceID              string
-	enabled                 bool
-	statsCollectionInterval int
-	enableCPUStats          bool
-	enableGCStats           bool
-	enableMemStats          bool
-	statsSamplingRate       int
-	errorFilePath           string
-	kubeNameSpace           string
-	configLog               logger.ConfigLogger
+	StatsEnabled            bool
+	StatsdServerURL         string
+	InstanceID              string
+	Enabled                 bool
+	StatsCollectionInterval int
+	EnableCPUStats          bool
+	EnableGCStats           bool
+	EnableMemStats          bool
+	StatsSamplingRate       int
+	ErrorFilePath           string
+	KubeNameSpace           string
+	ConfigLog               logger.ConfigLogger
 }
 
 // func init() {
@@ -67,7 +67,7 @@ type ConfigStats struct {
 
 // }
 
-var DefaultConfigStats = ConfigStats{statsEnabled: false, statsdServerURL: "localhost:8125", instanceID: "", enabled: true, statsCollectionInterval: 10, enableCPUStats: true, enableMemStats: true, enableGCStats: true, statsSamplingRate: 1, configLog: logger.DefaultConfigLogger, errorFilePath: "/tmp/error_store.json", kubeNameSpace: ""}
+var DefaultConfigStats = ConfigStats{StatsEnabled: false, StatsdServerURL: "localhost:8125", InstanceID: "", Enabled: true, StatsCollectionInterval: 10, EnableCPUStats: true, EnableMemStats: true, EnableGCStats: true, StatsSamplingRate: 1, ConfigLog: logger.DefaultConfigLogger, ErrorFilePath: "/tmp/error_store.json", KubeNameSpace: ""}
 var kubeNameSpace string
 
 type Tags map[string]string
@@ -122,18 +122,18 @@ func checkAndValidateConfig(configList []interface{}) ConfigStats {
 func Setup(configList ...interface{}) {
 	var err error
 	config := checkAndValidateConfig(configList)
-	pkgLogger = logger.NewLogger(config.configLog).Child("stats")
-	statsEnabled = config.statsEnabled
-	statsdServerURL = config.statsdServerURL
-	instanceID = config.instanceID
-	enabled = config.enabled
-	statsCollectionInterval = int64(config.statsCollectionInterval)
-	enableCPUStats = config.enableCPUStats
-	enableGCStats = config.enableGCStats
-	statsSamplingRate = float32(config.statsSamplingRate)
-	errorFilePath = config.errorFilePath
+	pkgLogger = logger.NewLogger(config.ConfigLog).Child("stats")
+	statsEnabled = config.StatsEnabled
+	statsdServerURL = config.StatsdServerURL
+	instanceID = config.InstanceID
+	enabled = config.Enabled
+	statsCollectionInterval = int64(config.StatsCollectionInterval)
+	enableCPUStats = config.EnableCPUStats
+	enableGCStats = config.EnableGCStats
+	statsSamplingRate = float32(config.StatsSamplingRate)
+	errorFilePath = config.ErrorFilePath
 	conn = statsd.Address(statsdServerURL)
-	kubeNameSpace = config.kubeNameSpace
+	kubeNameSpace = config.KubeNameSpace
 	//TODO: Add tags by calling a function...
 	client, err = statsd.New(conn, statsd.TagsFormat(statsd.InfluxDB), defaultTags())
 	if err != nil {
