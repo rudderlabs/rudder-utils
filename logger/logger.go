@@ -171,6 +171,7 @@ func checkAndValidateConfig(configList []interface{}) ConfigLogger {
 func NewLogger(configList ...interface{}) *LoggerT {
 	config := checkAndValidateConfig(configList)
 	loadConfig(config)
+	Log = configureLogger()
 	return &LoggerT{config: config}
 }
 
