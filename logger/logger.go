@@ -179,6 +179,7 @@ func init() {
 	//	loadConfig()
 	DefaultConfigLogger = ConfigLogger{EnableConsole: true, EnableFile: false, ConsoleJsonFormat: false, FileJsonFormat: false, LogFileLocation: "/tmp/rudder_log.log", LogFileSize: 100, EnableTimestamp: true, EnableFileNameInLog: false, EnableStackTrace: false, LevelConfigStr: ""}
 	Log = configureLogger()
+	loadConfig(DefaultConfigLogger)
 	loggerLevelsCache = make(map[string]int)
 }
 
