@@ -178,7 +178,7 @@ func NewLogger(configList ...interface{}) *LoggerT {
 // Setup sets up the logger initially
 func init() {
 	//	loadConfig()
-	DefaultConfigLogger = ConfigLogger{EnableConsole: true, EnableFile: false, ConsoleJsonFormat: false, FileJsonFormat: false, LogFileLocation: "/tmp/rudder_log.log", LogFileSize: 100, EnableTimestamp: true, EnableFileNameInLog: false, EnableStackTrace: false, LevelConfigStr: ""}
+	DefaultConfigLogger = ConfigLogger{RootLevel: "INFO", EnableConsole: true, EnableFile: false, ConsoleJsonFormat: false, FileJsonFormat: false, LogFileLocation: "/tmp/rudder_log.log", LogFileSize: 100, EnableTimestamp: true, EnableFileNameInLog: false, EnableStackTrace: false, LevelConfigStr: ""}
 	loadConfig(DefaultConfigLogger)
 	Log = configureLogger()
 	loggerLevelsCache = make(map[string]int)
